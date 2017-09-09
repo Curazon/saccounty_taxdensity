@@ -5,52 +5,12 @@ import json
 from bs4 import BeautifulSoup
 
 #folsom appears to begin at 69
-#this may have been pointless...
+#000-000-0-000-0000
 # map_book_num = 72 #3 leading 0
 # page_num = 85 #3 leading 0
 # block_num = 0
 # parcel_num = 30 #3 leading 0's
 # div_num = 0 #4 leading 0's
-
-# bad_map = 0
-# bad_page = 0 
-# bad_block = 0
-# bad_parcel = 0 
-# bad_div = 0
-
-def judge(parcel_dict, tickType, tickBool):
-
-    #if parcel exists
-    if tickBool:
-        # bad_track = 0
-        #if bottom of parcel
-        # if tickType == 'div_num':
-        if tickType == 'parcel_num':
-            parcel_dict[tickType] += 1
-        
-        else:
-            parcel_dict[tickType] += 0
-            tickType = downshift(tickType)
-            parcel_dict[tickType] = 1
-    
-    #if parcel doesn't exist
-    else:
-        
-        # if bad_track > 2:
-        #if top of parcel
-        if tickType == 'map_book_num':
-            parcel_dict[tickType] += 1
-
-        else:
-            parcel_dict[tickType] = 0
-            tickType = upshift(tickType)
-            parcel_dict[tickType] += 1
-
-        # bad_track = bad_track + 1
-        # parcel_dict[tickType] += 1
-
-    return(parcel_dict, tickType)
-
 
 def downshift(tickType):
     if tickType == 'map_book_num':
@@ -62,16 +22,16 @@ def downshift(tickType):
     elif tickType == 'block_num':
         tickType = 'parcel_num'
 
-    elif tickType == 'parcel_num':
-        tickType = 'div_num'
+    # elif tickType == 'parcel_num':
+    #     tickType = 'div_num'
 
     return(tickType)
 
 def upshift(tickType):
-    if tickType == 'div_num':
-        tickType = 'parcel_num'
+    # if tickType == 'div_num':
+    #     tickType = 'parcel_num'
 
-    elif tickType == 'parcel_num':
+    if tickType == 'parcel_num':
         tickType = 'block_num'
 
     elif tickType == 'block_num':
@@ -82,51 +42,81 @@ def upshift(tickType):
 
     return(tickType)
 
-def increment(parcel_dict, tickType, tickBool):
+def increment(parcel_dict, limit_dict, tickType, loop_track):
 
-    if tickBool:
-        parcel_dict[tickType] += 1
+    #if current parcel num is less than limit
+    if parcel_dict[tickType] < limit_dict[tickType]:
 
+        #at bottom number
+        if tickType == 'parcel_num':
+            parcel_dict[tickType] += 1
+        
+        #increment current num then downshift
+        else:
+            # parcel_dict[tickType] = 0
+            tickType = downshift(tickType)
+            parcel_dict[tickType] += 1
+
+    #limit has been hit
     else:
 
+        #hit limit of top num
+        if tickType == 'map_book_num':
+            print("This is probably the end of the line.")
+            loop_track = False
+
+        #reset current num and then upshift
+        else:
+            parcel_dict[tickType] = 0
+            tickType = upshift(tickType)
+            parcel_dict[tickType] += 1
+
+    # full_parcel = str(parcel_dict['map_book_num']).zfill(3) + \
+    #             str(parcel_dict['page_num']).zfill(3) + \
+    #             str(parcel_dict['block_num']) + \
+    #             str(parcel_dict['parcel_num']).zfill(3) + \
+    #             str(parcel_dict['div_num']).zfill(4) 
+    
+    # print(full_parcel)
+
+    return(parcel_dict, tickType, loop_track)
 
 parcel_dict = {'map_book_num': 69,
-               'page_num' : 0,
+               'page_num' : 71,
                'block_num' : 0,
                'parcel_num' : 0,
                'div_num' : 0
               }
 
-bad_dict = {'bad_map' : 0,
-            'bad_page' : 0,
-            'bad_block' : 0,
-            'bad_parcel' : 0
-            # 'bad_div' : 0
-           }
+# parcel_dict = {'map_book_num': 69,
+#                'page_num' : 71,
+#                'block_num' : 0,
+#                'parcel_num' : 201,
+#                'div_num' : 0
+#               }
 
-tick_dict = {'tick_map' : False,
-             'tick_page' : False,
-             'tick_block' : False,
-             'tick_parcel' : True
+limit_dict = {'map_book_num' : 69,
+              'page_num' : 71,
+              'block_num' : 5,
+              'parcel_num' : 200
             #  'tick_div' : True
             }
 
-limit_dict = {'limit_map' : 72,
-             'limit_page' : 500,
-             'limit_block' : 5,
-             'limit_parcel' : 200
-            #  'tick_div' : True
-            }
+# limit_dict = {'map_book_num' : 69,
+#               'page_num' : 500,
+#               'block_num' : 5,
+#               'parcel_num' : 200
+#             #  'tick_div' : True
+#             }
 
 with open('tax_density_test.csv', "wb") as tax_density:
     writer = csv.writer(tax_density)
     writer.writerow(['City', 'Address', 'Parcel_Num', 'Tax', 'Lot_Size', 'Tax_Density'])
 
-    # bad_track = 0
-    loop_track = 0
+    loop_track = True
     tickType = 'parcel_num'
 
-    while loop_track < 2500:
+    while loop_track:
 
         full_parcel = str(parcel_dict['map_book_num']).zfill(3) + \
                       str(parcel_dict['page_num']).zfill(3) + \
@@ -136,7 +126,6 @@ with open('tax_density_test.csv', "wb") as tax_density:
 
         # url = 'https://eproptax.saccounty.net/#BillSummary/'
 
-        # print(full_parcel, ' exists.')
         xhr_url = 'https://eproptax.saccounty.net/service/EPropTax.svc/rest/BillSummary?parcel=' + full_parcel
 
         sqft_url = 'http://assessorparcelviewer.saccounty.net/GISWebService/GISWebservice.svc/parcels/public/' + full_parcel 
@@ -151,16 +140,13 @@ with open('tax_density_test.csv', "wb") as tax_density:
                 sq = json.loads(sqft_res.content)  
             
             except ValueError:
-                print(full_parcel, ValueError)
-                tickBool = False
+                # print(full_parcel, ValueError)
 
-                parcel_dict, tickType = judge(parcel_dict, tickType, tickBool)
+                parcel_dict, tickType, loop_track = increment(parcel_dict, limit_dict, tickType, loop_track)
                 continue
 
             #if there's a sqft and parcel exists and it's taxable
             if sq['LotSize'] and 'HelpLink' not in t and t['Bills']:
-
-                tickBool = True
       
                 folsomAddress = ' '.join(t['GlobalData']['Address'].split())
                 squareFootage = sq['LotSize']
@@ -169,21 +155,8 @@ with open('tax_density_test.csv', "wb") as tax_density:
     
                 writer.writerow([t['GlobalData']['City'], folsomAddress, full_parcel, fullTax, squareFootage, taxDensity])
 
-                parcel_dict, tickType = judge(parcel_dict, tickType, tickBool)                
-
-                print(parcel_dict, tickType, tickBool)
-                print( full_parcel )
-                print('\n')
+                parcel_dict, tickType, loop_track = increment(parcel_dict, limit_dict, tickType, loop_track)                
 
             else:
 
-                tickBool = False
-
-                parcel_dict, tickType = judge(parcel_dict, tickType, tickBool)                
-
-                # print(parcel_dict, tickType, tickBool)
-                # print( full_parcel )
-                # bad_track += 1
-                # print('\n')
-        
-        loop_track += 1
+                parcel_dict, tickType, loop_track = increment(parcel_dict, limit_dict, tickType, loop_track)                
